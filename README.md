@@ -33,4 +33,4 @@ npm run preview
 
 Pushes to `main` deploy `dist/` to Cloudflare Pages via GitHub Actions (`.github/workflows/deploy.yml`). You can also run the workflow manually from the Actions tab.
 
-Required repository secrets in **openlearnia/json-toolkit**: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CF_PAGES_JSON_TOOLKIT`.
+Required secrets: org-level `CF_API_TOKEN` and `CF_ACCOUNT_ID`, plus repo-level `CF_PAGES_JSON_TOOLKIT`.
