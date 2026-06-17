@@ -33,4 +33,4 @@ npm run preview
 
 Pushes to `main` deploy `dist/` to Cloudflare Pages via GitHub Actions (`.github/workflows/deploy.yml`). You can also run the workflow manually from the Actions tab.
 
-Required secrets: org-level `CF_API_TOKEN` and `CF_ACCOUNT_ID`, plus repo-level `CF_PAGES_JSON_TOOLKIT`.
+Required org secrets: `CF_API_TOKEN`, `CF_ACCOUNT_ID`. Pages project name is in `wrangler.jsonc`.
