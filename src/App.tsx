@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import type { ChangeEvent } from 'react'
+import type { ChangeEvent, ReactNode } from 'react'
 import { AppChrome } from './chrome/AppChrome'
 import { relatedExcept } from './chrome/relatedTools'
+import { formatParseError } from './lib/parseError'
 import './App.css'
 
 type FeedbackKind = 'success' | 'error'
@@ -11,30 +12,42 @@ type Feedback = {
   message: string
 }
 
-function getLineAndColumn(text: string, index: number) {
-  const safeIndex = Math.max(0, Math.min(index, text.length))
-  const segment = text.slice(0, safeIndex)
-  const lines = segment.split('\n')
-  const line = lines.length
-  const column = lines[lines.length - 1].length + 1
-  return { line, column }
+function getLineNumbers(text: string) {
+  return Array.from({ length: text.split('\n').length }, (_, index) => index + 1)
 }
 
-function getParseErrorDetails(source: string, error: unknown): string {
-  const fallbackMessage = error instanceof Error ? error.message : 'Invalid JSON.'
-  const match = fallbackMessage.match(/position\s+(\d+)/i)
+function highlightJson(text: string) {
+  const tokenPattern = /("(?:\\.|[^"\\])*")(?=\s*:)|("(?:\\.|[^"\\])*")|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g
+  const nodes: ReactNode[] = []
+  let cursor = 0
 
-  if (!match) {
-    return fallbackMessage
+  for (const match of text.matchAll(tokenPattern)) {
+    const token = match[0]
+    const index = match.index ?? 0
+    if (index > cursor) {
+      nodes.push(text.slice(cursor, index))
+    }
+
+    const className = match[1]
+      ? 'json-key'
+      : match[2]
+        ? 'json-string'
+        : match[3]
+          ? 'json-boolean'
+          : 'json-number'
+    nodes.push(
+      <span className={className} key={`${index}-${token}`}>
+        {token}
+      </span>,
+    )
+    cursor = index + token.length
   }
 
-  const position = Number.parseInt(match[1], 10)
-  if (Number.isNaN(position)) {
-    return fallbackMessage
+  if (cursor < text.length) {
+    nodes.push(text.slice(cursor))
   }
 
-  const { line, column } = getLineAndColumn(source, position)
-  return `${fallbackMessage} (line ${line}, column ${column})`
+  return nodes
 }
 
 function App() {
@@ -47,7 +60,7 @@ function App() {
   const setErrorFeedback = (source: string, error: unknown) => {
     setFeedback({
       kind: 'error',
-      message: getParseErrorDetails(source, error),
+      message: formatParseError(source, error),
     })
   }
 
@@ -98,6 +111,28 @@ function App() {
     }
   }
 
+  const handleClear = () => {
+    setInputText('')
+    setOutputText('')
+    setFeedback(null)
+  }
+
+  const handleDownload = () => {
+    if (!outputText) {
+      setFeedback({ kind: 'error', message: 'No output available to download.' })
+      return
+    }
+
+    const blob = new Blob([outputText], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const downloadLink = document.createElement('a')
+    downloadLink.href = url
+    downloadLink.download = 'formatted.json'
+    downloadLink.click()
+    URL.revokeObjectURL(url)
+    setFeedback({ kind: 'success', message: 'JSON downloaded.' })
+  }
+
   const handleFileLoad = async (event: ChangeEvent<HTMLInputElement>) => {
     const [file] = event.target.files ?? []
     if (!file) {
@@ -133,48 +168,75 @@ function App() {
           <p>Format, validate, and minify JSON entirely in your browser.</p>
         </header>
 
-        <section className="panel">
-          <label htmlFor="json-input" className="section-title">
-            Input JSON
-          </label>
-          <textarea
-            id="json-input"
-            value={inputText}
-            onChange={(event) => setInputText(event.target.value)}
-            placeholder='Paste JSON here, e.g. {"name":"Openlearnia"}'
-            spellCheck={false}
-          />
+        <div className="panes">
+          <section className="panel pane">
+            <div className="pane-header">
+              <label htmlFor="json-input" className="section-title">
+                Input JSON
+              </label>
+              <span>{inputText.length} chars</span>
+            </div>
+            <div className="code-editor">
+              <pre className="line-numbers" aria-hidden="true">
+                {getLineNumbers(inputText).map((line) => (
+                  <span key={line}>{line}</span>
+                ))}
+              </pre>
+              <textarea
+                id="json-input"
+                value={inputText}
+                onChange={(event) => setInputText(event.target.value)}
+                placeholder='Paste JSON here, e.g. {"name":"Openlearnia"}'
+                spellCheck={false}
+              />
+            </div>
 
-          <div className="controls">
-            <input type="file" accept=".json,application/json,text/plain" onChange={handleFileLoad} />
-            <button className="primary-action" type="button" onClick={handleFormat}>
-              Pretty format
-            </button>
-            <button className="secondary-action" type="button" onClick={handleMinify}>
-              Minify
-            </button>
-            <button className="secondary-action" type="button" onClick={handleValidate}>
-              Validate
-            </button>
-            <button className="secondary-action" type="button" onClick={handleCopyOutput}>
-              Copy output
-            </button>
-          </div>
+            <div className="controls">
+              <input type="file" accept=".json,application/json,text/plain" onChange={handleFileLoad} />
+              <button className="primary-action" type="button" onClick={handleFormat}>
+                Format
+              </button>
+              <button className="secondary-action" type="button" onClick={handleMinify}>
+                Minify
+              </button>
+              <button className="secondary-action" type="button" onClick={handleValidate}>
+                Validate
+              </button>
+              <button className="secondary-action" type="button" onClick={handleClear}>
+                Clear
+              </button>
+            </div>
+          </section>
 
-          {feedback && (
-            <p className={`feedback ${feedback.kind}`} role="status">
-              {feedback.message}
-            </p>
-          )}
-        </section>
+          <section className="panel pane">
+            <div className="pane-header">
+              <h2>Output</h2>
+              <span>{outputLength} chars</span>
+            </div>
+            <div className="pane-actions">
+              <button className="secondary-action" type="button" onClick={handleCopyOutput}>
+                Copy
+              </button>
+              <button className="secondary-action" type="button" onClick={handleDownload}>
+                Download
+              </button>
+            </div>
+            <div className="code-output" aria-label="Formatted JSON output">
+              <pre className="line-numbers" aria-hidden="true">
+                {getLineNumbers(outputText).map((line) => (
+                  <span key={line}>{line}</span>
+                ))}
+              </pre>
+              <pre className="json-hl">{outputText ? highlightJson(outputText) : 'Output will appear here.'}</pre>
+            </div>
+          </section>
+        </div>
 
-        <section className="panel">
-          <div className="output-header">
-            <h2>Output</h2>
-            <span>{outputLength} chars</span>
-          </div>
-          <textarea value={outputText} readOnly spellCheck={false} placeholder="Output will appear here." />
-        </section>
+        {feedback && (
+          <p className={`feedback ${feedback.kind}`} role={feedback.kind === 'error' ? 'alert' : 'status'}>
+            {feedback.message}
+          </p>
+        )}
       </div>
     </AppChrome>
   )
