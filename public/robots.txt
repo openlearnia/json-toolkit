@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://json-toolkit.openlearnia.com/sitemap.xml
