@@ -12,6 +12,8 @@ type Feedback = {
   message: string
 }
 
+const SAMPLE = '{\n  "hello": "openlearnia",\n  "tools": ["json", "markdown"]\n}\n'
+
 function getLineNumbers(text: string) {
   return Array.from({ length: text.split('\n').length }, (_, index) => index + 1)
 }
@@ -117,6 +119,12 @@ function App() {
     setFeedback(null)
   }
 
+  const handleLoadSample = () => {
+    setInputText(SAMPLE)
+    setOutputText('')
+    setFeedback(null)
+  }
+
   const handleDownload = () => {
     if (!outputText) {
       setFeedback({ kind: 'error', message: 'No output available to download.' })
@@ -193,6 +201,11 @@ function App() {
 
             <div className="controls">
               <input type="file" accept=".json,application/json,text/plain" onChange={handleFileLoad} />
+              {!inputText && (
+                <button className="secondary-action" type="button" onClick={handleLoadSample}>
+                  Try sample JSON
+                </button>
+              )}
               <button className="primary-action" type="button" onClick={handleFormat}>
                 Format
               </button>
