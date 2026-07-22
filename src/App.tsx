@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { ChangeEvent } from 'react'
+import { AppChrome } from './chrome/AppChrome'
+import { relatedExcept } from './chrome/relatedTools'
 import './App.css'
 
 type FeedbackKind = 'success' | 'error'
@@ -120,55 +122,61 @@ function App() {
   }
 
   return (
-    <main className="app-shell">
-      <header className="app-header">
-        <h1>JSON Toolkit</h1>
-        <p>Format, validate, and minify JSON entirely in your browser.</p>
-      </header>
+    <AppChrome
+      productName="JSON Toolkit"
+      githubUrl="https://github.com/openlearnia/json-toolkit"
+      relatedTools={relatedExcept('https://json-toolkit.openlearnia.com')}
+    >
+      <div className="app-shell">
+        <header className="tool-intro">
+          <h1>JSON Toolkit</h1>
+          <p>Format, validate, and minify JSON entirely in your browser.</p>
+        </header>
 
-      <section className="panel">
-        <label htmlFor="json-input" className="section-title">
-          Input JSON
-        </label>
-        <textarea
-          id="json-input"
-          value={inputText}
-          onChange={(event) => setInputText(event.target.value)}
-          placeholder='Paste JSON here, e.g. {"name":"Openlearnia"}'
-          spellCheck={false}
-        />
+        <section className="panel">
+          <label htmlFor="json-input" className="section-title">
+            Input JSON
+          </label>
+          <textarea
+            id="json-input"
+            value={inputText}
+            onChange={(event) => setInputText(event.target.value)}
+            placeholder='Paste JSON here, e.g. {"name":"Openlearnia"}'
+            spellCheck={false}
+          />
 
-        <div className="controls">
-          <input type="file" accept=".json,application/json,text/plain" onChange={handleFileLoad} />
-          <button type="button" onClick={handleFormat}>
-            Pretty format
-          </button>
-          <button type="button" onClick={handleMinify}>
-            Minify
-          </button>
-          <button type="button" onClick={handleValidate}>
-            Validate
-          </button>
-          <button type="button" onClick={handleCopyOutput}>
-            Copy output
-          </button>
-        </div>
+          <div className="controls">
+            <input type="file" accept=".json,application/json,text/plain" onChange={handleFileLoad} />
+            <button className="primary-action" type="button" onClick={handleFormat}>
+              Pretty format
+            </button>
+            <button className="secondary-action" type="button" onClick={handleMinify}>
+              Minify
+            </button>
+            <button className="secondary-action" type="button" onClick={handleValidate}>
+              Validate
+            </button>
+            <button className="secondary-action" type="button" onClick={handleCopyOutput}>
+              Copy output
+            </button>
+          </div>
 
-        {feedback && (
-          <p className={`feedback ${feedback.kind}`} role="status">
-            {feedback.message}
-          </p>
-        )}
-      </section>
+          {feedback && (
+            <p className={`feedback ${feedback.kind}`} role="status">
+              {feedback.message}
+            </p>
+          )}
+        </section>
 
-      <section className="panel">
-        <div className="output-header">
-          <h2>Output</h2>
-          <span>{outputLength} chars</span>
-        </div>
-        <textarea value={outputText} readOnly spellCheck={false} placeholder="Output will appear here." />
-      </section>
-    </main>
+        <section className="panel">
+          <div className="output-header">
+            <h2>Output</h2>
+            <span>{outputLength} chars</span>
+          </div>
+          <textarea value={outputText} readOnly spellCheck={false} placeholder="Output will appear here." />
+        </section>
+      </div>
+    </AppChrome>
   )
 }
 
